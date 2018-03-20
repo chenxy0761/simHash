@@ -6,13 +6,13 @@ package com.ideal.main;
  * @version 0.1
  */
 
-import org.wltea.analyzer.IKSegmentation;
-import org.wltea.analyzer.Lexeme;
+import com.huaban.analysis.jieba.JiebaSegmenter;
+import com.huaban.analysis.jieba.Word;
 
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -43,22 +43,13 @@ public class SimHash {
     public BigInteger simHash() throws IOException {
         // 定义特征向量/数组
         int[] v = new int[this.hashbits];
-        // 英文分词
-        // StringTokenizer stringTokens = new StringTokenizer(this.tokens);
-        // while (stringTokens.hasMoreTokens()) {
-        // String temp = stringTokens.nextToken();
-        // }
-        // 1、中文分词，分词器采用 IKAnalyzer3.2.8 ，仅供演示使用，新版 API 已变化。
-        StringReader reader = new StringReader(this.tokens);
-        // 当为true时，分词器进行最大词长切分
-        IKSegmentation ik = new IKSegmentation(reader, true);
-        Lexeme lexeme = null;
+        JiebaSegmenter segmenter = new JiebaSegmenter();
+        List<Word> list = segmenter.sentenceProcess(tokens);
         String word = null;
         String temp = null;
-        while ((lexeme = ik.next()) != null) {
-            word = lexeme.getLexemeText();
+        for (Word str : list) {
+            word = str.getToken();
             // 注意停用词会被干掉
-            System.out.println(word);
             // 2、将每一个分词hash为一组固定长度的数列.比如 64bit 的一个整数.
             BigInteger t = this.hash(word);
             for (int i = 0; i < this.hashbits; i++) {
@@ -174,50 +165,32 @@ public class SimHash {
         return characters;
     }
 
-    /**
-     * 传统的 hash 算法只负责将原始内容尽量均匀随机地映射为一个签名值，"
-     * "原理上相当于伪随机数产生算法。产生的两个签名，如果相等，说明原始内容在一定概 率 下是相等的；"
-     * "如果不相等，除了说明原始内容不相等外，不再提供任何信息，因为即使原始内容只相差一个字节，"
-     * "所产生的签名也很可能差别极大。从这个意义 上来 说，要设计一个 hash 算法，"
-     * "对相似的内容产生的签名也相近，是更为艰难的任务，因为它的签名值除了提供原始内容是否相等的信息外，"
-     * "还能额外提供不相等的 原始内容的差异程度的信息。
-     * <p>
-     * 原理上相当于伪随机数产生算法。产生的两个签名，如果相等，说明原始内容在一定概 率 下是相等的；"
-     * "如果不相等，除了说明原始内容不相等外，不再提供任何信息，因为即使原始内容只相差一个字节，"
-     * "所产生的签名也很可能差别极大。从这个意义 上来 说，要设计一个 hash 算法，"
-     * "对相似的内容产生的签名也相近，是更为艰难的任务，因为它的签名值除了提供原始内容是否相等的信息外，"
-     * "干扰1还能额外提供不相等的 原始内容的差异程度的信息。
-     * <p>
-     * imhash算法的输入是一个向量，输出是一个 f 位的签名值。为了陈述方便，"
-     * "假设输入的是一个文档的特征集合，每个特征有一定的权重。"
-     * "传统干扰4的 hash 算法只负责将原始内容尽量均匀随机地映射为一个签名值，"
-     * "原理上这次差异有多大呢3相当于伪随机数产生算法。产生的两个签名，如果相等，"
-     * "说明原始内容在一定概 率 下是相等的；如果不相等，除了说明原始内容不相等外，不再提供任何信息，"
-     * "因为即使原始内容只相差一个字节，所产生的签名也很可能差别极大。从这个意义 上来 说，"
-     * "要设计一个 hash 算法，对相似的内容产生的签名也相近，是更为艰难的任务，因为它的签名值除了提供原始"
-     * "内容是否相等的信息外，干扰1还能额外提供不相等的 原始再来干扰2内容的差异程度的信息。
-     *
-     * @param args
-     * @throws IOException
-     */
 
     public static void main(String[] args) throws IOException {
-        String s = "上海腾讯数码有限公司";
-        SimHash hash1 = new SimHash(s, 64);
-        System.out.println(hash1.intSimHash + "  " + hash1.intSimHash.bitLength());
-        // 计算 海明距离 在 3 以内的各块签名的 hash 值
-        hash1.subByDistance(hash1, 3);
+        long begin = System.currentTimeMillis();
+        File file1 = new File("C:\\Users\\chenyang\\Desktop\\vector1");
+        BufferedReader reader1 = null;
+        reader1 = new BufferedReader(new FileReader(file1));
 
-        // 删除首句话，并加入干扰串
-        s = "上海腾讯数码有限公司";
-        SimHash hash2 = new SimHash(s, 64);
-        System.out.println(hash2.intSimHash + "  " + hash2.intSimHash.bitCount());
-        hash1.subByDistance(hash2, 3);
-
-        System.out.println("============================");
-
-        int dis = hash1.getDistance(hash1.strSimHash, hash2.strSimHash);
-        System.out.println(hash1.hammingDistance(hash2));
-        //System.out.println(hash1.hammingDistance(hash2) + " " + dis);
+        File file2 = new File("C:\\Users\\chenyang\\Desktop\\content_seg.txt");
+        BufferedReader reader2 = null;
+        String tempString = null;
+        String tempString2 = null;
+        while ((tempString = reader1.readLine()) != null) {
+            SimHash hash1 = new SimHash(tempString, 64);
+            //System.out.println(hash1.intSimHash + "  " + hash1.intSimHash.bitLength());
+            // 计算 海明距离 在 3 以内的各块签名的 hash 值
+            hash1.subByDistance(hash1, 3);
+            reader2 = new BufferedReader(new FileReader(file2));
+            while ((tempString2 = reader2.readLine()) != null) {
+                SimHash hash2 = new SimHash(tempString2, 64);
+                //System.out.println(hash2.intSimHash + "  " + hash2.intSimHash.bitCount());
+                hash1.subByDistance(hash2, 3);
+                int dis = hash1.getDistance(hash1.strSimHash, hash2.strSimHash);
+                hash1.hammingDistance(hash2);
+            }
+        }
+        long end = System.currentTimeMillis();
+        System.out.println(end - begin);
     }
 }
